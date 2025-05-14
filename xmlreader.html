@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ECG XML Waveform Viewer</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type="file"] {
+      margin-bottom: 20px;
+    }
+    #plot {
+      width: 100%;
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>ECG XML Waveform Viewer</h2>
+    <input type="file" id="fileInput" accept=".xml" />
+    <div id="plot"></div>
+  </div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(evt.target.result, 'text/xml');
+
+        // Get lead data from XML - assuming one lead here for simplicity
+        const digitsNode = xmlDoc.querySelector('value > digits');
+        const scaleNode = xmlDoc.querySelector('scale');
+
+        if (!digitsNode || !scaleNode) {
+          alert('Could not find ECG waveform data.');
+          return;
+        }
+
+        const digits = digitsNode.textContent.trim().split(/\s+/).map(Number);
+        const scale = parseFloat(scaleNode.getAttribute('value')) || 1;
+        const samplingRate = 500; // assumed
+
+        const times = digits.map((_, i) => i / samplingRate);
+        const amplitudes = digits.map(val => val * scale);
+
+        Plotly.newPlot('plot', [{
+          x: times,
+          y: amplitudes,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Lead I'
+        }], {
+          title: 'ECG Lead I Waveform',
+          xaxis: { title: 'Time (s)' },
+          yaxis: { title: 'Amplitude (μV)' }
+        });
+      };
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>
